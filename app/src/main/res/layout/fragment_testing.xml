@@ -21,9 +21,9 @@
         android:text="@string/playRingtone" />
 
     <Button
-        android:id="@+id/button_play_alarm"
+        android:id="@+id/button_play_media"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/playAlarm" />
+        android:text="@string/playMedia" />
 
 </LinearLayout>

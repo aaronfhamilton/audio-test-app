@@ -13,12 +13,13 @@ import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
-import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import io.atlaslabs.audiotestapp.activities.MainActivity;
+import io.atlaslabs.audiotestapp.util.Utils;
 import timber.log.Timber;
 
 public class UserNotificationManager {
@@ -55,18 +56,35 @@ public class UserNotificationManager {
 		mNotificationChannel = Utils.isAtLeastO() ? createNotificationChannel(mContext, mNotificationManager) : null;
 	}
 
-	public void playMedia(){
-		MediaPlayer mp = MediaPlayer.create(mContext, mSoundUri);
+	public void playMedia(Uri soundUri) {
+		if (soundUri == null) {
+			Utils.showToast(mContext, "No sound Uri selected");
+			return;
+		}
+		Utils.showToast(mContext, "Playing media %s", soundUri.toString());
+		MediaPlayer mp = MediaPlayer.create(mContext, soundUri);
 		mp.start();
 	}
 
-	public void playRingtone(){
-		try {
-			Toast.makeText(mContext, "Playing Default Ringtone", Toast.LENGTH_LONG).show();
-			mRingtone.play();
-		} catch (Exception ex) {
-			Timber.e(ex, "Error playing default ringtone: %s", ex.getLocalizedMessage());
+	public void playRingtone(Uri soundUri) {
+		if (soundUri == null)  {
+			Utils.showToast(mContext, "No sound Uri selected");
+			return;
 		}
+
+		try {
+			Ringtone ringtone = RingtoneManager.getRingtone(mContext, soundUri);
+			Utils.showToast(mContext, "Playing ringtone %s", ringtone);
+			ringtone.play();
+		} catch (Exception ex) {
+			Utils.showToast(mContext, "Error playing ringtone Uri %s: %s", soundUri, ex.getLocalizedMessage());
+		}
+
+	}
+
+	public void playRingtone(){
+		Uri uri = Uri.parse(mUriPrefix + R.raw.chime);
+		playRingtone(uri);
 	}
 
 	private NotificationCompat.Builder buildNotification(String title, String description) {

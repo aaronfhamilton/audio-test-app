@@ -1,9 +1,10 @@
-package io.atlaslabs.audiotestapp;
+package io.atlaslabs.audiotestapp.activities;
 
 import android.os.Bundle;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.view.View;
@@ -13,16 +14,20 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import io.atlaslabs.audiotestapp.R;
 import io.atlaslabs.audiotestapp.databinding.ActivityMainBinding;
+import io.atlaslabs.audiotestapp.util.PermissionUtil;
+import io.atlaslabs.audiotestapp.util.Utils;
 
 import android.view.Menu;
 import android.view.MenuItem;
+
+import org.jetbrains.annotations.NotNull;
 
 public class MainActivity extends AppCompatActivity {
 
 	private AppBarConfiguration appBarConfiguration;
 	private ActivityMainBinding binding;
-
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
 		binding.fab.setOnClickListener(view -> Snackbar.make(view, "Empty action", Snackbar.LENGTH_LONG)
 				.setAction("Action", listener -> {
 				}).show());
+
+		if (!PermissionUtil.getNeededRuntimePermissions(this)) {
+			Utils.showToast(this, "Missing one or more required runtime permissions");
+		}
 	}
 
 	@Override
@@ -47,6 +56,15 @@ public class MainActivity extends AppCompatActivity {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.menu_main, menu);
 		return true;
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull @NotNull String[] permissions, @NonNull @NotNull int[] grantResults) {
+		if (permissions.length == 0)
+			return;
+
+		if (requestCode == PermissionUtil.PERMISSIONS_REQUEST_SINGLE_CODE)
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 	}
 
 	@Override
