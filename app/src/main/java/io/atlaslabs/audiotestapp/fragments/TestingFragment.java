@@ -1,4 +1,4 @@
-package io.atlaslabs.audiotestapp;
+package io.atlaslabs.audiotestapp.fragments;
 
 import android.app.Activity;
 import android.content.Context;
@@ -15,12 +15,17 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map;
 
+import io.atlaslabs.audiotestapp.R;
+import io.atlaslabs.audiotestapp.UserNotificationManager;
 import io.atlaslabs.audiotestapp.databinding.FragmentTestingBinding;
 import io.atlaslabs.audiotestapp.util.KeyValueAdapter;
 import io.atlaslabs.audiotestapp.util.RingtonePicker;
+import io.atlaslabs.audiotestapp.util.Utils;
 
 public class TestingFragment extends Fragment implements
 		AdapterView.OnItemSelectedListener {
@@ -28,7 +33,7 @@ public class TestingFragment extends Fragment implements
 	private static final int RINGTONE_REQUEST_CODE = 1;
 
 	private FragmentTestingBinding binding;
-	private UserNotificationManager mUserNotificationMgr;
+	private Uri mSoundUri = null;
 
 	@Override
 	public View onCreateView(
@@ -42,17 +47,30 @@ public class TestingFragment extends Fragment implements
 	public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
-		mUserNotificationMgr = new UserNotificationManager(view.getContext());
 		binding.spinnerRingtoneType.setOnItemSelectedListener(this);
 		loadSpinner(binding.getRoot().getContext());
 
+		binding.buttonNotify.setOnClickListener(view1 -> {
+			UserNotificationManager.getInstance().notify("Notification Update",
+					String.format("Notification updated at %s", new Date()));
+		});
+
 		binding.buttonPlayMedia.setOnClickListener(view1 -> {
-			// mUserNotificationMgr.playDefaultMedia();
+			UserNotificationManager.getInstance().playMedia(mSoundUri);
 		});
 
 		binding.buttonPlayRingtone.setOnClickListener(view1 -> {
-			mUserNotificationMgr.playRingtone();
+			UserNotificationManager.getInstance().playRingtone(mSoundUri);
 		});
+
+		binding.buttonCloseActivity.setOnClickListener(view1 -> {
+			getActivity().finish();
+		});
+
+		if (Utils.isAtLeastO()) {
+			UserNotificationManager.getInstance().playMedia(mSoundUri);
+			getActivity().finish();
+		}
 	}
 
 	private void loadSpinner(Context context) {
@@ -60,16 +78,18 @@ public class TestingFragment extends Fragment implements
 		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		binding.spinnerRingtoneType.setAdapter(adapter);
 
-		binding.spinnerRingtoneType.setOnItemSelectedListener(this);
+		// binding.spinnerRingtoneType.setOnItemSelectedListener(this);
 	}
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, @Nullable Intent result) {
-		if (resultCode != Activity.RESULT_OK || result == null)
+		if (resultCode != Activity.RESULT_OK || result == null) {
+			mSoundUri = null;
 			return;
+		}
 
-		Uri soundUri = result.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-		mUserNotificationMgr.playMedia(soundUri);
+		mSoundUri = result.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
+		// mUserNotificationMgr.playMedia(mSoundUri);
 	}
 
 	@Override

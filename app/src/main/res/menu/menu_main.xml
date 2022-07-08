@@ -3,8 +3,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="io.atlaslabs.audiotestapp.activities.MainActivity">
     <item
-        android:id="@+id/action_settings"
+        android:id="@+id/menu_app_settings"
         android:orderInCategory="100"
-        android:title="@string/action_settings"
+        android:title="@string/app_settings"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_notify_settings"
+        android:orderInCategory="100"
+        android:title="@string/notification_settings"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_exit"
+        android:orderInCategory="200"
+        android:title="@string/exit"
+        />
+
 </menu>

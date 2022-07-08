@@ -1,4 +1,4 @@
-package io.atlaslabs.audiotestapp;
+package io.atlaslabs.audiotestapp.fragments;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
+import io.atlaslabs.audiotestapp.R;
 import io.atlaslabs.audiotestapp.databinding.FragmentSecondBinding;
 
 public class SecondFragment extends Fragment {
@@ -20,22 +21,15 @@ public class SecondFragment extends Fragment {
 			LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState
 	) {
-
 		binding = FragmentSecondBinding.inflate(inflater, container, false);
 		return binding.getRoot();
-
 	}
 
 	public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
-		binding.buttonSecond.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				NavHostFragment.findNavController(SecondFragment.this)
-						.navigate(R.id.action_SecondFragment_to_FirstFragment);
-			}
-		});
+		binding.buttonSecond.setOnClickListener(view1 -> NavHostFragment.findNavController(SecondFragment.this)
+				.navigate(R.id.action_SecondFragment_to_FirstFragment));
 	}
 
 	@Override

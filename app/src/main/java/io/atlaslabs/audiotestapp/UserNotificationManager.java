@@ -1,5 +1,6 @@
 package io.atlaslabs.audiotestapp;
 
+import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,6 +9,8 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.AudioRouting;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -16,75 +19,178 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import io.atlaslabs.audiotestapp.activities.MainActivity;
 import io.atlaslabs.audiotestapp.util.Utils;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 import timber.log.Timber;
 
-public class UserNotificationManager {
-	private static final String CHANNEL_ID = "io.atlaslabs.audiotestapp";
+/**
+ * Handles notifications and audio:
+ * - AudioManager - provides access to volume and ringer mode control
+ * - MediaPlayer - controls playback of audio/video files and streams. Not thread safe - must
+ * access player instances from within same thread. If registering callbacks, thread must have a looper.
+ */
+public class UserNotificationManager implements MediaPlayer.OnErrorListener,
+		MediaPlayer.OnInfoListener, MediaPlayer.OnCompletionListener {
 	public static final int PERSISTENT_NOTIFICATION_ID = 1;
+	public static final String CHANNEL_ID = "io.atlaslabs.audiotestapp";
 
+	private static UserNotificationManager mInstance = null;
 	private final String mUriPrefix;
 	private final Ringtone mRingtone;
 	private final Uri mSoundUri;
-
 	private final Uri mDefaultAlarmUri;
 	private final Uri mDefaultRingtone;
 	private final Uri mDefaultNotification;
-
 	private final Context mContext;
-
 	private final NotificationChannel mNotificationChannel;
-	private final NotificationManager mNotificationManager;
+	private final NotificationManagerCompat mNotificationManager;
 
 	private Notification mPersistentNotification = null;
 
-	public UserNotificationManager(Context context){
-		mContext = context;
-		mUriPrefix = ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + context.getPackageName() + "/";
-		mRingtone = RingtoneManager.getRingtone(context, Uri.parse(mUriPrefix + R.raw.chime));
+	private CompositeDisposable mDisposables = new CompositeDisposable();
+
+	private UserNotificationManager(Application appContext) {
+
+		mContext = appContext;
+		mUriPrefix = ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + appContext.getPackageName() + "/";
+		mRingtone = RingtoneManager.getRingtone(appContext, Uri.parse(mUriPrefix + R.raw.chime));
 		mSoundUri = Uri.parse(mUriPrefix + R.raw.chime);
 
 		mDefaultAlarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
 		mDefaultNotification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 		mDefaultRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
-		mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+		mNotificationManager = NotificationManagerCompat.from(mContext);
 
 		mNotificationChannel = Utils.isAtLeastO() ? createNotificationChannel(mContext, mNotificationManager) : null;
 	}
 
+	public static void setup(Application app) {
+		if (mInstance != null)
+			return;
+
+		mInstance = new UserNotificationManager(app);
+	}
+
+	public static UserNotificationManager getInstance() {
+		return mInstance;
+	}
+
+	public void cleanup() {
+		mDisposables.dispose();
+	}
+
+	@Override
+	public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
+		Timber.e("Media player error: what=%d, extra=%d", what, extra);
+		return false;
+	}
+
+	@Override
+	public boolean onInfo(MediaPlayer mediaPlayer, int what, int extra) {
+		Timber.w("Media player info: what(type)=%d, extra=%d", what, extra);
+		return false;
+	}
+
+	@Override
+	public void onCompletion(MediaPlayer mediaPlayer) {
+		Timber.d("MediaPlayer session ID %d completed", mediaPlayer.getAudioSessionId());
+		mediaPlayer.release();
+	}
+
+	@RequiresApi(Build.VERSION_CODES.O)
 	public void playMedia(Uri soundUri) {
 		if (soundUri == null) {
-			Utils.showToast(mContext, "No sound Uri selected");
-			return;
+			Utils.showToast(mContext, "No sound Uri selected. Playing app default %s", mSoundUri);
+			soundUri = mSoundUri;
 		}
-		Utils.showToast(mContext, "Playing media %s", soundUri.toString());
-		MediaPlayer mp = MediaPlayer.create(mContext, soundUri);
-		mp.start();
+
+		Uri finalSoundUri = soundUri;
+		mDisposables.add(Observable.fromCallable(() -> {
+			AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+			int sessionId = am.generateAudioSessionId();
+			int ringerMode = am.getRingerMode();
+
+			Timber.i("AudioManager ringerMode=%d", ringerMode);
+
+			AudioAttributes attrib = new AudioAttributes.Builder()
+					.setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+					.build();
+
+			// In prepared state when create is used
+			MediaPlayer mp = MediaPlayer.create(mContext, R.raw.chime, attrib, sessionId);
+			mp.setOnErrorListener(this);
+			mp.setOnCompletionListener(this);
+
+			mp.start();
+
+			return sessionId;
+		})
+				.subscribeOn(Schedulers.io())
+				.observeOn(AndroidSchedulers.mainThread())
+				.subscribe(result -> { },
+						throwable -> Timber.e(throwable, "Error playing media: %s", throwable.getLocalizedMessage()),
+						() -> Timber.i("Finished playing media")));
+
 	}
 
 	public void playRingtone(Uri soundUri) {
-		if (soundUri == null)  {
-			Utils.showToast(mContext, "No sound Uri selected");
-			return;
+		if (soundUri == null) {
+			Utils.showToast(mContext, "No sound Uri selected. Playing app default %s", mSoundUri);
+			soundUri = mSoundUri;
 		}
 
 		try {
 			Ringtone ringtone = RingtoneManager.getRingtone(mContext, soundUri);
-			Utils.showToast(mContext, "Playing ringtone %s", ringtone);
+			if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+				AudioAttributes attrib = ringtone.getAudioAttributes();
+				Utils.showToast(mContext, "Default ringtone %s: usage=%d, vcs=%d, flags=%d, contentType=%d", soundUri,
+						attrib.getUsage(), attrib.getVolumeControlStream(), attrib.getFlags(), attrib.getContentType());
+
+				attrib = new AudioAttributes.Builder()
+						.setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+						.setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+						.build();
+
+				ringtone.setAudioAttributes(attrib);
+
+				Utils.showToast(mContext, "New ringtone %s: usage=%d, vcs=%d, flags=%d, contentType=%d", soundUri,
+						attrib.getUsage(), attrib.getVolumeControlStream(), attrib.getFlags(), attrib.getContentType());
+			} else {
+				Utils.showToast(mContext, "Playing ringtone %s", ringtone);
+			}
+
 			ringtone.play();
+			Utils.showToast(mContext, "Is Playing: %s", ringtone.isPlaying());
 		} catch (Exception ex) {
 			Utils.showToast(mContext, "Error playing ringtone Uri %s: %s", soundUri, ex.getLocalizedMessage());
 		}
-
 	}
 
-	public void playRingtone(){
-		Uri uri = Uri.parse(mUriPrefix + R.raw.chime);
-		playRingtone(uri);
+	public void playRingtone() {
+		playRingtone(mSoundUri);
+	}
+
+	public Notification notify(String title, String description) {
+		if (Utils.isNullOrEmpty(title))
+			title = mContext.getString(R.string.app_name);
+		if (Utils.isNullOrEmpty(description))
+			description = mContext.getString(R.string.app_is_running);
+
+		mPersistentNotification = buildNotification(title, description)
+				.build();
+
+		Timber.d("Notifying with title \"%s\", description \"%s\"", title, description);
+		mNotificationManager.notify(PERSISTENT_NOTIFICATION_ID, mPersistentNotification);
+
+		return mPersistentNotification;
 	}
 
 	private NotificationCompat.Builder buildNotification(String title, String description) {
@@ -101,11 +207,13 @@ public class UserNotificationManager {
 				.setContentIntent(pendingIntent)
 				.setPriority(NotificationCompat.PRIORITY_HIGH);
 
+		// Determines whether notification is affected by Do Not Disturb mode
 		if (Utils.isAtLeastL())
-			builder.setCategory(Notification.CATEGORY_SERVICE);
+			builder.setCategory(Notification.CATEGORY_ALARM);
 
-		if (Utils.isAtLeastO())
-			builder.setSound(Uri.parse(mUriPrefix + R.raw.chime));
+		// Set sound to play on default stream. On Oreo and newer, this value is ignored in favor of
+		// the value set on the notification channel
+		builder.setSound(mSoundUri);
 
 		return builder;
 	}
@@ -116,7 +224,7 @@ public class UserNotificationManager {
 	}
 
 	@RequiresApi(Build.VERSION_CODES.O)
-	private NotificationChannel createNotificationChannel(Context context, NotificationManager nm) {
+	private NotificationChannel createNotificationChannel(Context context, NotificationManagerCompat nm) {
 		String name = context.getString(R.string.app_name);
 		String description = context.getString(R.string.app_is_running);
 		Timber.v("Creating notification channel %s", CHANNEL_ID);
@@ -125,6 +233,7 @@ public class UserNotificationManager {
 				.setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
 				.build();
 
+		description = String.format("Flags: %X, Usage: %X, VCS: %X", attribs.getFlags(), attribs.getUsage(), attribs.getVolumeControlStream());
 		NotificationChannel ch = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_HIGH);
 		ch.setDescription(description);
 		ch.enableLights(true);

@@ -2,8 +2,6 @@ package io.atlaslabs.audiotestapp;
 
 import android.app.Application;
 
-import androidx.viewbinding.BuildConfig;
-
 import timber.log.Timber;
 
 public class App extends Application {
@@ -13,5 +11,13 @@ public class App extends Application {
 
 		if (BuildConfig.DEBUG)
 			Timber.plant(new Timber.DebugTree());
+
+		UserNotificationManager.setup(this);
+	}
+
+	@Override
+	public void onTerminate() {
+		UserNotificationManager.getInstance().cleanup();
+		super.onTerminate();
 	}
 }

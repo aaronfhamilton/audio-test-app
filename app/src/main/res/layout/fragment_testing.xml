@@ -7,7 +7,7 @@
     android:layout_margin="16dp"
     android:gravity="center"
     android:orientation="vertical"
-    tools:context=".TestingFragment">
+    tools:context=".fragments.TestingFragment">
 
     <Spinner
         android:id="@+id/spinner_ringtone_type"
@@ -25,5 +25,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/playMedia" />
+
+    <Button
+        android:id="@+id/button_notify"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/notify" />
+
+    <Button
+        android:id="@+id/button_close_activity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/close_activity" />
 
 </LinearLayout>
