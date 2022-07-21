@@ -1,11 +1,14 @@
 package io.atlaslabs.audiotestapp;
 
 import android.app.Application;
-import android.app.Notification;
 import android.content.Intent;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.lifecycle.AndroidViewModel;
+
+import io.reactivex.Observable;
 
 public class MainViewModel extends AndroidViewModel {
 	private final Application mApp;
@@ -26,5 +29,10 @@ public class MainViewModel extends AndroidViewModel {
 		Intent stopIntent = new Intent(mApp, AppService.class);
 		stopIntent.putExtra(AppService.EXTRA_MESSAGE_ID, AppService.MSG.STOP_SERVICE);
 		mApp.startService(stopIntent);
+	}
+
+	@RequiresApi(Build.VERSION_CODES.O)
+	public Observable<Integer> playMobilis() {
+		return UserNotificationManager.getInstance().playMobilis();
 	}
 }

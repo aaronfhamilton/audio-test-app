@@ -22,49 +22,11 @@ public class AppService extends Service {
 	public static final String EXTRA_MESSAGE_ID = "message_id";
 
 	private static final int MESSAGE_ID_INVALID = -1;
-
-	public interface MSG {
-		int STOP_SERVICE = 0;
-		int START_SERVICE = 1;
-		int START_FOREGROUND = 2;
-		int DUMP_STATE = 3;
-		int PLAY_MEDIA = 4;
-	}
-
-	private HandlerThread mHandlerThread;
-	private ServiceHandler mServiceHandler;
-
-	private volatile boolean mRunService = false;
-
 	private final CompositeDisposable mDisposables = new CompositeDisposable();
 	private final Binder mBinder = new LocalBinder();
-
-	private final class ServiceHandler extends Handler {
-		public ServiceHandler(Looper looper) {
-			super(looper);
-		}
-
-		@Override
-		public void handleMessage(@NonNull Message msg) {
-			Timber.d("Handling service message ID %d", msg.what);
-			switch (msg.what) {
-				case MSG.START_FOREGROUND:
-					start(true);
-					break;
-				case MSG.START_SERVICE:
-					start(false);
-					break;
-				case MSG.STOP_SERVICE:
-					// Set flag to stop running the processing loop. Service will stop itself when this flag is no longer set.
-					mRunService = false;
-					UserNotificationManager.getInstance().cancelForegroundNotification();
-					stopSelf();
-					break;
-				default:
-					super.handleMessage(msg);
-			}
-		}
-	}
+	private HandlerThread mHandlerThread;
+	private ServiceHandler mServiceHandler;
+	private volatile boolean mRunService = false;
 
 	private void start(boolean foreground) {
 		mRunService = true;
@@ -134,15 +96,50 @@ public class AppService extends Service {
 		super.onDestroy();
 	}
 
-	private class LocalBinder extends Binder {
-		public AppService getService() {
-			return AppService.this;
-		}
-	}
-
 	@Nullable
 	@Override
 	public IBinder onBind(Intent intent) {
 		return mBinder;
+	}
+
+	public interface MSG {
+		int STOP_SERVICE = 0;
+		int START_SERVICE = 1;
+		int START_FOREGROUND = 2;
+		int DUMP_STATE = 3;
+		int PLAY_MEDIA = 4;
+	}
+
+	private final class ServiceHandler extends Handler {
+		public ServiceHandler(Looper looper) {
+			super(looper);
+		}
+
+		@Override
+		public void handleMessage(@NonNull Message msg) {
+			Timber.d("Handling service message ID %d", msg.what);
+			switch (msg.what) {
+				case MSG.START_FOREGROUND:
+					start(true);
+					break;
+				case MSG.START_SERVICE:
+					start(false);
+					break;
+				case MSG.STOP_SERVICE:
+					// Set flag to stop running the processing loop. Service will stop itself when this flag is no longer set.
+					mRunService = false;
+					UserNotificationManager.getInstance().cancelForegroundNotification();
+					stopSelf();
+					break;
+				default:
+					super.handleMessage(msg);
+			}
+		}
+	}
+
+	private class LocalBinder extends Binder {
+		public AppService getService() {
+			return AppService.this;
+		}
 	}
 }

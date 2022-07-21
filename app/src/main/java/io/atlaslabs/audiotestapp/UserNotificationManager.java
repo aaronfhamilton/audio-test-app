@@ -9,7 +9,9 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.media.AudioPlaybackConfiguration;
 import android.media.AudioRouting;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
@@ -21,6 +23,8 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+
+import java.util.List;
 
 import io.atlaslabs.audiotestapp.activities.MainActivity;
 import io.atlaslabs.audiotestapp.util.Utils;
@@ -54,7 +58,7 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 	private Notification mPersistentNotification = null;
 
-	private CompositeDisposable mDisposables = new CompositeDisposable();
+	private final CompositeDisposable mDisposables = new CompositeDisposable();
 
 	private UserNotificationManager(Application appContext) {
 
@@ -71,6 +75,9 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 		mNotificationChannel = Utils.isAtLeastO() ? createNotificationChannel(mContext, mNotificationManager) : null;
 	}
+
+	@RequiresApi(Build.VERSION_CODES.O)
+	private static final AudioRouting.OnRoutingChangedListener mRoutingListener = audioRouting -> Timber.i("Audio routing change: %s", audioRouting);
 
 	public static void setup(Application app) {
 		if (mInstance != null)
@@ -106,6 +113,33 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 	}
 
 	@RequiresApi(Build.VERSION_CODES.O)
+	public Observable<Integer> playMobilis() {
+		return Observable.fromCallable(() -> {
+			AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+			int sessionId = am.generateAudioSessionId();
+			int streamType = AudioManager.STREAM_ALARM;
+
+			AudioAttributes attrib = new AudioAttributes.Builder()
+					.setUsage(AudioAttributes.USAGE_ALARM)
+					.setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+					.build();
+
+			Ringtone ringtone = RingtoneManager.getRingtone(mContext, Uri.parse(mUriPrefix + R.raw.woopwoop));
+			ringtone.setAudioAttributes(attrib);
+
+			int maxVolume = am.getStreamMaxVolume(streamType);
+			int currentVolume = am.getStreamVolume(streamType);
+
+			Timber.d("Stream %d volumes: current = %d, max = %d", streamType, currentVolume, maxVolume);
+			am.setStreamVolume(streamType, currentVolume, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+
+			ringtone.play();
+
+			return sessionId;
+				});
+	}
+
+	@RequiresApi(Build.VERSION_CODES.O)
 	public void playMedia(Uri soundUri) {
 		if (soundUri == null) {
 			Utils.showToast(mContext, "No sound Uri selected. Playing app default %s", mSoundUri);
@@ -116,9 +150,6 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 		mDisposables.add(Observable.fromCallable(() -> {
 			AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
 			int sessionId = am.generateAudioSessionId();
-			int ringerMode = am.getRingerMode();
-
-			Timber.i("AudioManager ringerMode=%d", ringerMode);
 
 			AudioAttributes attrib = new AudioAttributes.Builder()
 					.setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -129,7 +160,13 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 			mp.setOnErrorListener(this);
 			mp.setOnCompletionListener(this);
 
+			Timber.i("Media %s: usage=%d, vcs=%d, flags=%d, contentType=%d", finalSoundUri,
+					attrib.getUsage(), attrib.getVolumeControlStream(), attrib.getFlags(), attrib.getContentType());
 			mp.start();
+			List<AudioPlaybackConfiguration> configs = am.getActivePlaybackConfigurations();
+			Timber.i("AudioManager: ringermode=%d, mode=%d", am.getRingerMode(), am.getMode());
+
+			// Timber.i("Volumes: ", am.getStreamVolume(), am.getStreamMinVolume());
 
 			return sessionId;
 		})
@@ -137,7 +174,7 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 				.observeOn(AndroidSchedulers.mainThread())
 				.subscribe(result -> { },
 						throwable -> Timber.e(throwable, "Error playing media: %s", throwable.getLocalizedMessage()),
-						() -> Timber.i("Finished playing media")));
+						() -> { }));
 
 	}
 

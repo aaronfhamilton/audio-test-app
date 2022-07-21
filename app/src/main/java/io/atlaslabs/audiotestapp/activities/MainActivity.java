@@ -71,6 +71,9 @@ public class MainActivity extends AppCompatActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+
+		if (mViewModel != null)
+			mViewModel.stopService();
 	}
 
 	@Override
