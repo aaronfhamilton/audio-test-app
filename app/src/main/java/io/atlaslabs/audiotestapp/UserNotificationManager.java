@@ -121,18 +121,27 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 			AudioAttributes attrib = new AudioAttributes.Builder()
 					.setUsage(AudioAttributes.USAGE_ALARM)
+					//.setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
 					.setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
 					.build();
 
 			Ringtone ringtone = RingtoneManager.getRingtone(mContext, Uri.parse(mUriPrefix + R.raw.woopwoop));
+
+			AudioAttributes existingAttribs = ringtone.getAudioAttributes();
+
+			Timber.d("Existing attribs: vcs = %d, flags = %d, content = %d, usage = %d", existingAttribs.getVolumeControlStream(),
+					existingAttribs.getFlags(),	existingAttribs.getContentType(), existingAttribs.getUsage());
 			ringtone.setAudioAttributes(attrib);
 
+			Timber.d("Attribs: vcs = %d", attrib.getVolumeControlStream());
 			int maxVolume = am.getStreamMaxVolume(streamType);
 			int currentVolume = am.getStreamVolume(streamType);
 
 			Timber.d("Stream %d volumes: current = %d, max = %d", streamType, currentVolume, maxVolume);
 			am.setStreamVolume(streamType, currentVolume, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
 
+			Timber.d("Ringtone: stream type = %d", ringtone.getStreamType());
+			// ringtone.setLooping(true);
 			ringtone.play();
 
 			return sessionId;

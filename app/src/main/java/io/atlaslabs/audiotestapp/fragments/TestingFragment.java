@@ -79,6 +79,7 @@ public class TestingFragment extends Fragment implements
 			mDisposable.set(mViewModel.playMobilis()
 					.subscribeOn(Schedulers.io())
 					.observeOn(AndroidSchedulers.mainThread())
+					.doOnError(throwable -> Timber.e(throwable))
 					.subscribe(result -> {
 								Timber.i("onNext(session ID %d)", result);
 							},
