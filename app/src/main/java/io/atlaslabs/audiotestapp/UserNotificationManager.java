@@ -47,11 +47,7 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 	private static UserNotificationManager mInstance = null;
 	private final String mUriPrefix;
-	private final Ringtone mRingtone;
 	private final Uri mSoundUri;
-	private final Uri mDefaultAlarmUri;
-	private final Uri mDefaultRingtone;
-	private final Uri mDefaultNotification;
 	private final Context mContext;
 	private final NotificationChannel mNotificationChannel;
 	private final NotificationManagerCompat mNotificationManager;
@@ -64,12 +60,8 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 		mContext = appContext;
 		mUriPrefix = ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + appContext.getPackageName() + "/";
-		mRingtone = RingtoneManager.getRingtone(appContext, Uri.parse(mUriPrefix + R.raw.chime));
+		// mRingtone = RingtoneManager.getRingtone(appContext, Uri.parse(mUriPrefix + R.raw.chime));
 		mSoundUri = Uri.parse(mUriPrefix + R.raw.chime);
-
-		mDefaultAlarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-		mDefaultNotification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-		mDefaultRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
 		mNotificationManager = NotificationManagerCompat.from(mContext);
 
@@ -108,12 +100,12 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 	@Override
 	public void onCompletion(MediaPlayer mediaPlayer) {
-		Timber.d("MediaPlayer session ID %d completed", mediaPlayer.getAudioSessionId());
+		Timber.d("MediaPlayer session ID %d completed. Releasing mediaPlayer", mediaPlayer.getAudioSessionId());
 		mediaPlayer.release();
 	}
 
 	@RequiresApi(Build.VERSION_CODES.O)
-	public Observable<Integer> playMobilis() {
+	public Observable<Integer> playMobilisObservable() {
 		return Observable.fromCallable(() -> {
 			AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
 			int sessionId = am.generateAudioSessionId();
@@ -220,10 +212,6 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 		}
 	}
 
-	public void playRingtone() {
-		playRingtone(mSoundUri);
-	}
-
 	public Notification notify(String title, String description) {
 		if (Utils.isNullOrEmpty(title))
 			title = mContext.getString(R.string.app_name);
@@ -259,7 +247,7 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 
 		// Set sound to play on default stream. On Oreo and newer, this value is ignored in favor of
 		// the value set on the notification channel
-		builder.setSound(mSoundUri);
+		// builder.setSound(mSoundUri);
 
 		return builder;
 	}
@@ -284,7 +272,7 @@ public class UserNotificationManager implements MediaPlayer.OnErrorListener,
 		ch.setDescription(description);
 		ch.enableLights(true);
 		ch.enableVibration(true);
-		ch.setSound(mSoundUri, attribs);
+		// ch.setSound(mSoundUri, attribs);
 
 		// Register the channel with the system; Can't change the importance or other notification behaviors after this
 		if (nm != null) {

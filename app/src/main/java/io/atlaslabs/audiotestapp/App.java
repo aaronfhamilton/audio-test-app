@@ -12,6 +12,7 @@ public class App extends Application {
 		if (BuildConfig.DEBUG)
 			Timber.plant(new Timber.DebugTree());
 
+		SoundTest.setup(this);
 		UserNotificationManager.setup(this);
 	}
 

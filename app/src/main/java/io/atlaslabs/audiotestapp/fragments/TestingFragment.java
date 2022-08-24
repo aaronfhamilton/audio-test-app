@@ -21,6 +21,7 @@ import java.util.Map;
 
 import io.atlaslabs.audiotestapp.MainViewModel;
 import io.atlaslabs.audiotestapp.R;
+import io.atlaslabs.audiotestapp.SoundTest;
 import io.atlaslabs.audiotestapp.UserNotificationManager;
 import io.atlaslabs.audiotestapp.databinding.FragmentTestingBinding;
 import io.atlaslabs.audiotestapp.util.KeyValueAdapter;
@@ -39,6 +40,7 @@ public class TestingFragment extends Fragment implements
 	private FragmentTestingBinding binding;
 	private Uri mSoundUri = null;
 	private MainViewModel mViewModel;
+	private Thread mAudioPlaybackThread = null;
 
 	@Override
 	public View onCreateView(
@@ -76,18 +78,12 @@ public class TestingFragment extends Fragment implements
 		});
 
 		if (Utils.isAtLeastO()) {
-			mDisposable.set(mViewModel.playMobilis()
-					.subscribeOn(Schedulers.io())
-					.observeOn(AndroidSchedulers.mainThread())
-					.doOnError(throwable -> Timber.e(throwable))
-					.subscribe(result -> {
-								Timber.i("onNext(session ID %d)", result);
-							},
-							throwable -> Timber.e(throwable, "Error playing media: %s", throwable.getLocalizedMessage()),
-							() -> {
-								getActivity().finish();
-							}));
-			// getActivity().finish();
+			// int sessionId = SoundTest.getInstance().playMobilisAudio();
+
+			// Timber.i("Playing Mobilis sound using session ID %d", sessionId);
+
+			mAudioPlaybackThread = SoundTest.getInstance().playAudioOnBackground(null);
+			mAudioPlaybackThread.start();
 		}
 	}
 
@@ -113,6 +109,12 @@ public class TestingFragment extends Fragment implements
 	@Override
 	public void onDestroyView() {
 		super.onDestroyView();
+
+		if (mAudioPlaybackThread != null && mAudioPlaybackThread.isAlive()) {
+			try { mAudioPlaybackThread.join(30000); }
+			catch (Exception ignored) { }
+		}
+
 		binding = null;
 	}
 

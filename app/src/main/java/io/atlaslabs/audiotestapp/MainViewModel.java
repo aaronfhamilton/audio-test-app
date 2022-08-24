@@ -33,6 +33,6 @@ public class MainViewModel extends AndroidViewModel {
 
 	@RequiresApi(Build.VERSION_CODES.O)
 	public Observable<Integer> playMobilis() {
-		return UserNotificationManager.getInstance().playMobilis();
+		return UserNotificationManager.getInstance().playMobilisObservable();
 	}
 }
