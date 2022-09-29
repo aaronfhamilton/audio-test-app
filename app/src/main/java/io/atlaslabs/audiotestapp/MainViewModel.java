@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.lifecycle.AndroidViewModel;
 
+import io.atlaslabs.audiotestapp.util.Utils;
 import io.reactivex.Observable;
 
 public class MainViewModel extends AndroidViewModel {
@@ -19,6 +20,14 @@ public class MainViewModel extends AndroidViewModel {
 
 		mApp = app;
 		mSoundSettings = new SoundSettings(app, 1.0f, true, 10);
+	}
+
+	public void playSoundTest() {
+		SoundTest.getInstance().play();
+	}
+
+	public void stopSoundTest() {
+		SoundTest.getInstance().stop();
 	}
 
 	public void startAlert() {

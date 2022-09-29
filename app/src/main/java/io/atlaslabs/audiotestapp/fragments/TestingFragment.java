@@ -77,16 +77,8 @@ public class TestingFragment extends Fragment implements
 			getActivity().finish();
 		});
 
-		if (Utils.isAtLeastO()) {
-			// int sessionId = SoundTest.getInstance().playMobilisAudio();
-
-			// Timber.i("Playing Mobilis sound using session ID %d", sessionId);
-
-			// mAudioPlaybackThread = SoundTest.getInstance().playAudioOnBackground(null);
-			// mAudioPlaybackThread.start();
-		}
-
-		mViewModel.startAlert();
+		// mViewModel.startAlert();
+		mViewModel.playSoundTest();
 	}
 
 	private void loadSpinner(Context context) {
@@ -112,12 +104,8 @@ public class TestingFragment extends Fragment implements
 	public void onDestroyView() {
 		super.onDestroyView();
 
-		mViewModel.stopAlert();
-
-		if (mAudioPlaybackThread != null && mAudioPlaybackThread.isAlive()) {
-			try { mAudioPlaybackThread.join(30000); }
-			catch (Exception ignored) { }
-		}
+		// mViewModel.stopAlert();
+		mViewModel.stopSoundTest();
 
 		binding = null;
 	}
