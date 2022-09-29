@@ -60,6 +60,7 @@ public class SoundTest implements MediaPlayer.OnErrorListener,
 
 			int streamType = attrib.getVolumeControlStream();
 			Ringtone ringtone = RingtoneManager.getRingtone(mContext, mSoundUri);
+			ringtone.setStreamType(RingtoneManager.TYPE_ALARM);
 
 			AudioAttributes existingAttribs = ringtone.getAudioAttributes();
 
