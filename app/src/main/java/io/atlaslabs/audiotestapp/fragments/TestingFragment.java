@@ -82,9 +82,11 @@ public class TestingFragment extends Fragment implements
 
 			// Timber.i("Playing Mobilis sound using session ID %d", sessionId);
 
-			mAudioPlaybackThread = SoundTest.getInstance().playAudioOnBackground(null);
-			mAudioPlaybackThread.start();
+			// mAudioPlaybackThread = SoundTest.getInstance().playAudioOnBackground(null);
+			// mAudioPlaybackThread.start();
 		}
+
+		mViewModel.startAlert();
 	}
 
 	private void loadSpinner(Context context) {
@@ -109,6 +111,8 @@ public class TestingFragment extends Fragment implements
 	@Override
 	public void onDestroyView() {
 		super.onDestroyView();
+
+		mViewModel.stopAlert();
 
 		if (mAudioPlaybackThread != null && mAudioPlaybackThread.isAlive()) {
 			try { mAudioPlaybackThread.join(30000); }

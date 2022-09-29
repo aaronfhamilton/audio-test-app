@@ -12,11 +12,21 @@ import io.reactivex.Observable;
 
 public class MainViewModel extends AndroidViewModel {
 	private final Application mApp;
+	private final SoundSettings mSoundSettings;
 
 	public MainViewModel(@NonNull Application app) {
 		super(app);
 
 		mApp = app;
+		mSoundSettings = new SoundSettings(app, 1.0f, true, 10);
+	}
+
+	public void startAlert() {
+		App.GetAlertPlayer().startSound(mSoundSettings);
+	}
+
+	public void stopAlert() {
+		App.GetAlertPlayer().stopSound();
 	}
 
 	public void startService() {
@@ -29,10 +39,5 @@ public class MainViewModel extends AndroidViewModel {
 		Intent stopIntent = new Intent(mApp, AppService.class);
 		stopIntent.putExtra(AppService.EXTRA_MESSAGE_ID, AppService.MSG.STOP_SERVICE);
 		mApp.startService(stopIntent);
-	}
-
-	@RequiresApi(Build.VERSION_CODES.O)
-	public Observable<Integer> playMobilis() {
-		return UserNotificationManager.getInstance().playMobilisObservable();
 	}
 }

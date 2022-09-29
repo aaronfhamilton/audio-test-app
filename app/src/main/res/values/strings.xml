@@ -8,6 +8,9 @@
     <string name="close_activity">Close Activity</string>
     <string name="exit">Exit</string>
 
+    <string name="DEFAULT_VOLUME">0.5</string>
+    <string name="MAX_VOLUME">1.0</string>
+
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">Audio Testing</string>
     <string name="second_fragment_label">Second Fragment</string>
